@@ -25,6 +25,7 @@ import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
 import NotFoundPage from './pages/NotFoundPage';
 import OrderDetailPage from './pages/OrderDetailPage';
+import OrdersPage from './pages/OrdersPage';
 
 function App() {
   return (
@@ -50,6 +51,14 @@ function App() {
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/cart" element={<CartPage />} />
                     <Route path="/wishlist" element={<WishlistPage />} />
+                    <Route 
+                      path="/orders" 
+                      element={
+                        <ProtectedRoute>
+                          <OrdersPage />
+                        </ProtectedRoute>
+                      } 
+                    />
                     <Route 
                       path="/order/:id" 
                       element={

@@ -10,6 +10,7 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [contactMessages, setContactMessages] = useState([]);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -36,6 +37,7 @@ const AdminDashboard = () => {
     fetchStats();
     fetchProducts();
     fetchOrders();
+    fetchContactMessages();
   }, [isAdmin, navigate]);
 
   const fetchStats = async () => {
@@ -62,6 +64,25 @@ const AdminDashboard = () => {
       setOrders(response.data.orders);
     } catch (error) {
       console.error('Error fetching orders:', error);
+    }
+  };
+
+  const fetchContactMessages = async () => {
+    try {
+      const response = await api.get('/contact');
+      setContactMessages(response.data.messages || []);
+    } catch (error) {
+      console.error('Error fetching contact messages:', error);
+    }
+  };
+
+  const handleUpdateMessageStatus = async (messageId, status) => {
+    try {
+      await api.put(`/contact/${messageId}/status`, { status });
+      toast.success('Message status updated');
+      fetchContactMessages();
+    } catch (error) {
+      toast.error('Failed to update message status');
     }
   };
 
@@ -227,6 +248,17 @@ const AdminDashboard = () => {
             className={`px-4 py-2 ${activeTab === 'orders' ? 'border-b-2 border-primary' : ''}`}
           >
             Orders
+          </button>
+          <button
+            onClick={() => setActiveTab('messages')}
+            className={`px-4 py-2 ${activeTab === 'messages' ? 'border-b-2 border-primary' : ''}`}
+          >
+            Contact Messages
+            {contactMessages.filter(m => m.status === 'new').length > 0 && (
+              <span className="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                {contactMessages.filter(m => m.status === 'new').length}
+              </span>
+            )}
           </button>
         </div>
 
@@ -551,6 +583,95 @@ const AdminDashboard = () => {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {activeTab === 'messages' && (
+          <div>
+            <h2 className="text-2xl font-bold mb-6">Contact Messages</h2>
+            {contactMessages.length === 0 ? (
+              <div className="card p-12 text-center">
+                <svg className="w-24 h-24 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                <p className="text-gray-600 dark:text-gray-400">No contact messages yet</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {contactMessages.map((message) => (
+                  <div
+                    key={message._id}
+                    className={`card p-6 border-l-4 ${
+                      message.status === 'new'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : message.status === 'read'
+                        ? 'border-gray-400'
+                        : 'border-green-500'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h3 className="text-lg font-bold text-slate-900 dark:text-white">{message.name}</h3>
+                          {message.status === 'new' && (
+                            <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">New</span>
+                          )}
+                          {message.status === 'replied' && (
+                            <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full">Replied</span>
+                          )}
+                        </div>
+                        <div className="mb-2">
+                          <p className="text-purple-600 dark:text-purple-400">{message.email}</p>
+                          {message.phone && (
+                            <p className="text-purple-600 dark:text-purple-400 text-sm">
+                              📞 {message.phone}
+                            </p>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                          {new Date(message.createdAt).toLocaleString()}
+                        </p>
+                        <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-200 dark:border-slate-700">
+                          {message.message}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2 mt-4">
+                      <a
+                        href={`mailto:${message.email}?subject=Re: Your Contact Form Submission&body=Dear ${message.name},%0D%0A%0D%0AThank you for contacting us.`}
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-purple-700 hover:to-pink-700 transition-all"
+                      >
+                        Reply via Email
+                      </a>
+                      {message.phone && (
+                        <a
+                          href={`tel:${message.phone}`}
+                          className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-600 transition-all"
+                        >
+                          Call
+                        </a>
+                      )}
+                      {message.status === 'new' && (
+                        <button
+                          onClick={() => handleUpdateMessageStatus(message._id, 'read')}
+                          className="bg-gray-200 dark:bg-slate-700 text-slate-900 dark:text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-300 dark:hover:bg-slate-600 transition-all"
+                        >
+                          Mark as Read
+                        </button>
+                      )}
+                      {message.status !== 'replied' && (
+                        <button
+                          onClick={() => handleUpdateMessageStatus(message._id, 'replied')}
+                          className="bg-green-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-600 transition-all"
+                        >
+                          Mark as Replied
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

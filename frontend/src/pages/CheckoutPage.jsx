@@ -19,6 +19,8 @@ const CheckoutPage = () => {
     pincode: '',
   });
   const [paymentMethod, setPaymentMethod] = useState('COD');
+  const [upiId, setUpiId] = useState('');
+  const [upiError, setUpiError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const subtotal = getCartTotal();
@@ -28,6 +30,28 @@ const CheckoutPage = () => {
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const validateUPI = (id) => {
+    // UPI ID format: name@paytm, name@phonepe, name@ybl, etc.
+    const upiPattern = /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/;
+    return upiPattern.test(id);
+  };
+
+  const handleUPIChange = (e) => {
+    const value = e.target.value;
+    setUpiId(value);
+    if (value && !validateUPI(value)) {
+      setUpiError('Invalid UPI ID format. Example: name@paytm');
+    } else {
+      setUpiError('');
+    }
+  };
+
+  const handlePaymentMethodChange = (method) => {
+    setPaymentMethod(method);
+    setUpiId('');
+    setUpiError('');
   };
 
   const handleSubmit = async (e) => {
@@ -44,12 +68,19 @@ const CheckoutPage = () => {
       return;
     }
 
+    // Validate UPI if selected
+    if (paymentMethod === 'UPI' && (!upiId || !validateUPI(upiId))) {
+      setUpiError('Please enter a valid UPI ID');
+      return;
+    }
+
     setLoading(true);
 
     try {
       const response = await api.post('/orders', {
         shippingAddress: formData,
         paymentMethod,
+        upiId: paymentMethod === 'UPI' ? upiId : undefined,
       });
       
       toast.success('Order placed successfully!');
@@ -159,26 +190,97 @@ const CheckoutPage = () => {
                 
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold mb-4">Payment Method</h3>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
+                  <div className="space-y-4">
+                    <label className="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-purple-500 dark:hover:border-purple-400" style={{ borderColor: paymentMethod === 'COD' ? '#9333ea' : '#e5e7eb' }}>
                       <input
                         type="radio"
                         value="COD"
                         checked={paymentMethod === 'COD'}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="mr-2"
+                        onChange={(e) => handlePaymentMethodChange(e.target.value)}
+                        className="mt-1 mr-3"
                       />
-                      Cash on Delivery
+                      <div className="flex-1">
+                        <div className="font-semibold text-slate-900 dark:text-white">Cash on Delivery</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Pay when you receive</div>
+                      </div>
                     </label>
-                    <label className="flex items-center">
+                    
+                    <label className="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-purple-500 dark:hover:border-purple-400" style={{ borderColor: paymentMethod === 'UPI' ? '#9333ea' : '#e5e7eb' }}>
+                      <input
+                        type="radio"
+                        value="UPI"
+                        checked={paymentMethod === 'UPI'}
+                        onChange={(e) => handlePaymentMethodChange(e.target.value)}
+                        className="mt-1 mr-3"
+                      />
+                      <div className="flex-1">
+                        <div className="font-semibold text-slate-900 dark:text-white flex items-center">
+                          <svg className="w-5 h-5 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
+                            <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
+                          </svg>
+                          UPI Payment
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Pay via UPI (PhonePe, Google Pay, Paytm)</div>
+                      </div>
+                    </label>
+
+                    {paymentMethod === 'UPI' && (
+                      <div className="ml-8 mt-2 space-y-2">
+                        <div>
+                          <label className="block text-sm font-medium mb-2 text-slate-700 dark:text-slate-300">
+                            UPI ID <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={upiId}
+                            onChange={handleUPIChange}
+                            placeholder="yourname@paytm or yourname@ybl"
+                            className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-all ${
+                              upiError
+                                ? 'border-red-500 focus:ring-red-500'
+                                : 'border-gray-300 dark:border-slate-600 focus:ring-purple-500 dark:bg-slate-700 dark:text-white'
+                            }`}
+                          />
+                          {upiError && (
+                            <p className="mt-1 text-sm text-red-500">{upiError}</p>
+                          )}
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            Enter your UPI ID (e.g., name@paytm, name@phonepe, name@ybl)
+                          </p>
+                        </div>
+                        
+                        {/* UPI QR Code Simulation */}
+                        <div className="mt-4 p-4 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
+                          <div className="text-center">
+                            <div className="inline-block p-4 bg-white dark:bg-slate-900 rounded-lg mb-2">
+                              <div className="w-32 h-32 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
+                                <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                                </svg>
+                              </div>
+                            </div>
+                            <p className="text-sm font-semibold text-slate-900 dark:text-white">Scan to Pay</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                              Amount: ₹{total.toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <label className="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-purple-500 dark:hover:border-purple-400" style={{ borderColor: paymentMethod === 'CARD' ? '#9333ea' : '#e5e7eb' }}>
                       <input
                         type="radio"
                         value="CARD"
                         checked={paymentMethod === 'CARD'}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="mr-2"
+                        onChange={(e) => handlePaymentMethodChange(e.target.value)}
+                        className="mt-1 mr-3"
                       />
-                      Card Payment (Simulated)
+                      <div className="flex-1">
+                        <div className="font-semibold text-slate-900 dark:text-white">Card Payment</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">Debit/Credit Card (Simulated)</div>
+                      </div>
                     </label>
                   </div>
                 </div>

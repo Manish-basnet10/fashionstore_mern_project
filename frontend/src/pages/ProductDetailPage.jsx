@@ -3,25 +3,35 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
+import ReviewCard from '../components/ReviewCard';
+import StarRating from '../components/StarRating';
+import ImageSlider from '../components/ImageSlider';
 import toast from 'react-hot-toast';
 
 const ProductDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
-  const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [reviews, setReviews] = useState([]);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
   
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const { isAuthenticated, user } = useAuth();
 
   useEffect(() => {
     fetchProduct();
+    fetchReviews();
   }, [id]);
 
   const fetchProduct = async () => {
@@ -49,6 +59,86 @@ const ProductDetailPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      setReviewLoading(true);
+      const response = await api.get(`/products/${id}/reviews`);
+      setReviews(response.data.reviews || []);
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    
+    if (!reviewRating) {
+      toast.error('Please select a rating');
+      return;
+    }
+    
+    if (!reviewComment.trim()) {
+      toast.error('Please write a comment');
+      return;
+    }
+
+    try {
+      setSubmittingReview(true);
+      const response = await api.post(`/products/${id}/reviews`, {
+        rating: reviewRating,
+        comment: reviewComment.trim(),
+      });
+      
+      toast.success('Review added successfully! Thank you for your feedback.');
+      setReviewRating(0);
+      setReviewComment('');
+      
+      // Update product with new rating
+      setProduct(response.data.product);
+      
+      // Refresh reviews
+      await fetchReviews();
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      toast.error(
+        error.response?.data?.message || 'Failed to submit review'
+      );
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    if (!window.confirm('Are you sure you want to delete this review?')) {
+      return;
+    }
+
+    try {
+      const response = await api.delete(`/products/${id}/reviews/${reviewId}`);
+      toast.success('Review deleted successfully');
+      
+      // Update product with new rating
+      setProduct(response.data.product);
+      
+      // Refresh reviews
+      await fetchReviews();
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      toast.error('Failed to delete review');
+    }
+  };
+
+  const hasUserReviewed = () => {
+    if (!isAuthenticated || !user) return false;
+    return reviews.some((review) => {
+      const reviewUserId = review.user?._id || review.user;
+      const currentUserId = user._id || user;
+      return reviewUserId?.toString() === currentUserId?.toString();
+    });
   };
 
   const handleAddToCart = () => {
@@ -107,34 +197,9 @@ const ProductDetailPage = () => {
     <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4">
         <div className="grid md:grid-cols-2 gap-8 mb-12">
-          {/* Image Gallery */}
+          {/* Image Slider */}
           <div>
-            <div className="mb-4">
-              <img
-                src={product.images[selectedImage] || '/placeholder.jpg'}
-                alt={product.name}
-                className="w-full h-[600px] object-cover rounded-lg"
-              />
-            </div>
-            {product.images.length > 1 && (
-              <div className="flex space-x-2 overflow-x-auto">
-                {product.images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSelectedImage(idx)}
-                    className={`flex-shrink-0 w-24 h-24 border-2 rounded ${
-                      selectedImage === idx ? 'border-primary' : 'border-gray-300'
-                    }`}
-                  >
-                    <img
-                      src={img}
-                      alt={`${product.name} ${idx + 1}`}
-                      className="w-full h-full object-cover rounded"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
+            <ImageSlider images={product.images || []} productName={product.name} />
           </div>
 
           {/* Product Info */}
@@ -142,25 +207,21 @@ const ProductDetailPage = () => {
             <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
             <p className="text-gray-600 dark:text-gray-400 mb-4">{product.brand}</p>
             
-            {product.rating > 0 && (
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="flex">
-                  {[...Array(5)].map((_, i) => (
-                    <svg
-                      key={i}
-                      className={`w-5 h-5 ${
-                        i < Math.floor(product.rating) ? 'text-yellow-400' : 'text-gray-300'
-                      }`}
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <span>{product.rating} ({product.numReviews} reviews)</span>
-              </div>
-            )}
+            <div className="flex items-center space-x-3 mb-4">
+              <StarRating rating={product.rating || 0} size="md" />
+              <span className="text-gray-700 dark:text-gray-300">
+                {product.rating > 0 ? (
+                  <>
+                    <span className="font-semibold">{product.rating.toFixed(1)}</span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      {' '}({product.numReviews} {product.numReviews === 1 ? 'review' : 'reviews'})
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-gray-500 dark:text-gray-400">No reviews yet</span>
+                )}
+              </span>
+            </div>
 
             <div className="mb-6">
               <div className="flex items-center space-x-4 mb-2">
@@ -281,6 +342,99 @@ const ProductDetailPage = () => {
             </div>
           </div>
         </div>
+
+        {/* Reviews Section */}
+        <section className="mt-12 border-t border-gray-200 dark:border-gray-700 pt-8">
+          <h2 className="text-2xl font-bold mb-6">Customer Reviews</h2>
+
+          {/* Write Review Form - Only for authenticated users who haven't reviewed */}
+          {isAuthenticated && !hasUserReviewed() && (
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6">
+              <h3 className="text-lg font-semibold mb-3">Write a Review</h3>
+              <form onSubmit={handleSubmitReview}>
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-2">
+                    Rating <span className="text-red-500">*</span>
+                  </label>
+                  <StarRating
+                    rating={reviewRating}
+                    onRatingChange={setReviewRating}
+                    interactive={true}
+                    size="md"
+                  />
+                </div>
+                <div className="mb-3">
+                  <label
+                    htmlFor="review-comment"
+                    className="block text-sm font-medium mb-2"
+                  >
+                    Your Review <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id="review-comment"
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:bg-gray-700 dark:text-gray-100"
+                    placeholder="Share your experience..."
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={submittingReview || !reviewRating || !reviewComment.trim()}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submittingReview ? 'Submitting...' : 'Submit Review'}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {isAuthenticated && hasUserReviewed() && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
+              <p className="text-blue-800 dark:text-blue-200">
+                You have already reviewed this product.
+              </p>
+            </div>
+          )}
+
+          {!isAuthenticated && (
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6">
+              <p className="text-gray-700 dark:text-gray-300">
+                Please{' '}
+                <button
+                  onClick={() => navigate('/login', { state: { from: `/product/${id}` } })}
+                  className="text-primary hover:underline font-semibold"
+                >
+                  login
+                </button>
+                {' '}to write a review.
+              </p>
+            </div>
+          )}
+
+          {/* Reviews List */}
+          {reviewLoading ? (
+            <div className="flex justify-center py-6">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            </div>
+          ) : reviews.length > 0 ? (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {reviews.map((review) => (
+                <ReviewCard
+                  key={review._id}
+                  review={review}
+                  onDelete={handleDeleteReview}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+              <p className="text-sm">No reviews yet. Be the first to review this product!</p>
+            </div>
+          )}
+        </section>
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (

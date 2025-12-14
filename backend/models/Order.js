@@ -29,6 +29,7 @@ const shippingAddressSchema = new mongoose.Schema({
 const paymentResultSchema = new mongoose.Schema({
   paymentMethod: { type: String, required: true },
   transactionId: { type: String },
+  upiId: { type: String },
   status: { type: String },
 });
 
@@ -66,6 +67,11 @@ const orderSchema = new mongoose.Schema(
       type: String,
       required: true,
       default: 'COD', // Cash on Delivery
+      enum: ['COD', 'UPI', 'CARD'],
+    },
+    upiId: {
+      type: String,
+      trim: true,
     },
     isPaid: {
       type: Boolean,

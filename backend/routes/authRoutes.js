@@ -1,6 +1,7 @@
 import express from 'express';
 import User from '../models/User.js';
 import { protect, generateToken } from '../middleware/auth.js';
+import { uploadSingle } from '../middleware/upload.js';
 
 const router = express.Router();
 
@@ -137,7 +138,7 @@ router.get('/profile', protect, async (req, res) => {
 // @route   PUT /api/auth/profile
 // @desc    Update user profile
 // @access  Private
-router.put('/profile', protect, async (req, res) => {
+router.put('/profile', protect, uploadSingle, async (req, res) => {
   try {
     const { name, phone, addresses } = req.body;
     const user = await User.findById(req.user._id);
@@ -145,6 +146,11 @@ router.put('/profile', protect, async (req, res) => {
     if (name) user.name = name;
     if (phone) user.phone = phone;
     if (addresses) user.addresses = addresses;
+
+    // Handle profile image upload
+    if (req.file) {
+      user.profileImage = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+    }
 
     await user.save();
 

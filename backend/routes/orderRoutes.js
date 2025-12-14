@@ -62,13 +62,15 @@ router.post('/', async (req, res) => {
       orderItems,
       shippingAddress,
       paymentMethod,
+      upiId: req.body.upiId || undefined,
       itemsPrice,
       shippingPrice,
       taxPrice,
       totalPrice,
       paymentResult: {
         paymentMethod,
-        status: paymentMethod === 'COD' ? 'Pending' : 'Completed',
+        upiId: req.body.upiId || undefined,
+        status: paymentMethod === 'COD' ? 'Pending' : paymentMethod === 'UPI' ? 'Processing' : 'Completed',
       },
     });
 
