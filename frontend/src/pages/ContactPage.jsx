@@ -41,8 +41,8 @@ const ContactPage = () => {
         </svg>
       ),
       title: 'Email',
-      content: 'support@fashionstore.com',
-      link: 'mailto:support@fashionstore.com',
+      content: 'manishbasnet476@gmail.com',
+      link: 'mailto:manishbasnet476@gmail.com',
     },
     {
       icon: (
@@ -51,8 +51,8 @@ const ContactPage = () => {
         </svg>
       ),
       title: 'Phone',
-      content: '+1 (555) 123-4567',
-      link: 'tel:+15551234567',
+      content: '7300449730',
+      link: 'tel:+',
     },
     {
       icon: (
