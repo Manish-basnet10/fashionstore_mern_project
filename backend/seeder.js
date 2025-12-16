@@ -140,28 +140,6 @@ const products = [
     featured: false,
   },
   {
-    name: 'Men Formal Shirt',
-    description: 'Crisp white formal shirt perfect for office or formal occasions.',
-    price: 899,
-    originalPrice: 1399,
-    category: 'Men',
-    brand: 'FashionStore',
-    images: [
-      'https://images.unsplash.com/photo-1594938291221-94f18cbb3a57?w=500',
-      'https://images.unsplash.com/photo-1622445576154-32c1b1be0b10?w=500',
-    ],
-    colors: [
-      { name: 'White', code: '#FFFFFF' },
-      { name: 'Light Blue', code: '#ADD8E6' },
-      { name: 'Pink', code: '#FFC0CB' },
-    ],
-    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-    stock: 28,
-    rating: 4.5,
-    numReviews: 41,
-    featured: false,
-  },
-  {
     name: 'Women Casual Blazer',
     description: 'Stylish blazer that can be dressed up or down. Perfect for business casual.',
     price: 1999,

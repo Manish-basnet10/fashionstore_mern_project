@@ -35,7 +35,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Database Connection
 mongoose
-  .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/fashionstore')
+  .connect(process.env.MONGODB_URI)
   .then(() => console.log('✅ MongoDB Connected Successfully'))
   .catch((err) => console.error('❌ MongoDB Connection Error:', err));
 

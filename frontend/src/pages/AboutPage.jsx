@@ -17,10 +17,26 @@ const HERO_IMAGES = [
 const FOUNDER_IMAGE = "https://images.unsplash.com/photo-1574634534894-89d7576c8259?q=80&w=1964&auto=format&fit=crop";
 
 const TEAM_MEMBERS = [
-  { name: "Alex Morgan", role: "Founder", img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1974&auto=format&fit=crop" },
-  { name: "Sarah Jenkins", role: "Head Stylist", img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=1976&auto=format&fit=crop" },
-  { name: "Marcus Chen", role: "Operations", img: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?q=80&w=1974&auto=format&fit=crop" },
-  { name: "Elara Vane", role: "Designer", img: "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop" }
+  { 
+    name: "Manish Basnet", 
+    role: "Founder", 
+    img: "/team/manish.jpg" 
+  },
+  { 
+    name: "Aastha Gupta", 
+    role: "Head Stylist", 
+    img: "/team/aastha.jpg" 
+  },
+  { 
+    name: "Mansur Ansari", 
+    role: "Operations", 
+    img: "/team/mansur.jpg" 
+  },
+  { 
+    name: "Kanhaiya Patel", 
+    role: "Designer", 
+    img: "/team/kanhaiya.jpg" 
+  }
 ];
 
 function AboutPage() {
@@ -251,7 +267,7 @@ function AboutPage() {
             <div className="flex text-amber-400 gap-1 mb-4 text-xl">
               <FaStar /><FaStar /><FaStar /><FaStar /><FaStar />
             </div>
-            <p className="text-xl font-bold">Jessica Pearson</p>
+            <p className="text-xl font-bold">Manish basnet</p>
             <p className="text-gray-400 text-sm">Loyal Customer</p>
           </div>
         </div>
