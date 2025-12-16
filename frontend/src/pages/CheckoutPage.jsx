@@ -23,6 +23,7 @@ const CheckoutPage = () => {
   const [upiError, setUpiError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Safe calculation to prevent crashes
   const subtotal = getCartTotal();
   const shipping = subtotal > 1000 ? 0 : 50;
   const tax = subtotal * 0.18;
@@ -77,11 +78,36 @@ const CheckoutPage = () => {
     setLoading(true);
 
     try {
-      const response = await api.post('/orders', {
+      // 1. Safety Filter for Ghost Items
+      const validItems = cart.items.filter(item => item && item.product && item.product._id);
+
+      if (validItems.length === 0) {
+        toast.error("Your cart contains invalid items. Please clear cart.");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Prepare Order Data
+      const orderData = {
+        orderItems: validItems.map(item => ({
+          product: item.product._id,
+          name: item.product.name,
+          price: item.product.price,
+          image: item.product.images?.[0] || '',
+          qty: item.quantity,
+          size: item.size || 'M',
+          color: item.color || 'Black'
+        })),
         shippingAddress: formData,
         paymentMethod,
         upiId: paymentMethod === 'UPI' ? upiId : undefined,
-      });
+        itemsPrice: subtotal,
+        taxPrice: tax,
+        shippingPrice: shipping,
+        totalPrice: total
+      };
+
+      const response = await api.post('/orders', orderData);
       
       toast.success('Order placed successfully!');
       clearCart();
@@ -90,6 +116,7 @@ const CheckoutPage = () => {
       navigate(`/order/${response.data.order._id}`);
       
     } catch (error) {
+      console.error(error);
       toast.error(error.response?.data?.message || 'Failed to place order');
     } finally {
       setLoading(false);
@@ -191,6 +218,7 @@ const CheckoutPage = () => {
                 <div className="mt-6">
                   <h3 className="text-lg font-semibold mb-4">Payment Method</h3>
                   <div className="space-y-4">
+                    {/* Cash on Delivery Option */}
                     <label className="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-purple-500 dark:hover:border-purple-400" style={{ borderColor: paymentMethod === 'COD' ? '#9333ea' : '#e5e7eb' }}>
                       <input
                         type="radio"
@@ -205,6 +233,7 @@ const CheckoutPage = () => {
                       </div>
                     </label>
                     
+                    {/* UPI Option */}
                     <label className="flex items-start p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-purple-500 dark:hover:border-purple-400" style={{ borderColor: paymentMethod === 'UPI' ? '#9333ea' : '#e5e7eb' }}>
                       <input
                         type="radio"
@@ -225,6 +254,7 @@ const CheckoutPage = () => {
                       </div>
                     </label>
 
+                    {/* UPI Expanded Section */}
                     {paymentMethod === 'UPI' && (
                       <div className="ml-8 mt-2 space-y-2">
                         <div>
@@ -250,20 +280,29 @@ const CheckoutPage = () => {
                           </p>
                         </div>
                         
-                        {/* UPI QR Code Simulation */}
+                        {/* 🚨 UPI QR Code Integration (Using Public Image) */}
                         <div className="mt-4 p-4 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-slate-700">
                           <div className="text-center">
-                            <div className="inline-block p-4 bg-white dark:bg-slate-900 rounded-lg mb-2">
-                              <div className="w-32 h-32 bg-gray-200 dark:bg-gray-700 rounded flex items-center justify-center">
-                                <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                                </svg>
+                            <div className="inline-block p-2 bg-white rounded-lg mb-2 shadow-sm">
+                              {/* This loads the 'upi.jpg' file from your 'public' folder. 
+                                Make sure your file is named exactly 'upi.jpg' inside 'frontend/public/'
+                              */}
+                              <div className="w-40 h-40 bg-white flex items-center justify-center overflow-hidden">
+                                <img 
+                                  src="/upi.jpeg" 
+                                  alt="Scan to Pay"
+                                  className="w-full h-full object-contain"
+                                />
                               </div>
                             </div>
-                            <p className="text-sm font-semibold text-slate-900 dark:text-white">Scan to Pay</p>
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                              Amount: ₹{total.toFixed(2)}
+                            
+                            <p className="text-sm font-bold text-slate-900 dark:text-white">Scan with any UPI App</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              GPay / PhonePe / Paytm
                             </p>
+                            <div className="mt-2 inline-block px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-bold border border-indigo-200 dark:border-indigo-700">
+                              Amount: ₹{total.toFixed(2)}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -300,11 +339,14 @@ const CheckoutPage = () => {
             <div className="card p-6 sticky top-24">
               <h2 className="text-xl font-bold mb-4">Order Summary</h2>
               <div className="space-y-2 mb-4">
+                {/* 🛡️ Added safety check (?.name) to prevent crash on null items */}
                 {cart.items.map((item) => (
-                  <div key={item._id} className="flex justify-between text-sm">
-                    <span>{item.product?.name} x {item.quantity}</span>
-                    <span>₹{(item.product?.price * item.quantity).toFixed(2)}</span>
-                  </div>
+                  item.product && (
+                    <div key={item._id} className="flex justify-between text-sm">
+                      <span>{item.product.name} x {item.quantity}</span>
+                      <span>₹{(item.product.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  )
                 ))}
               </div>
               <div className="border-t pt-2 space-y-2">
@@ -335,4 +377,4 @@ const CheckoutPage = () => {
   );
 };
 
-export default CheckoutPage;
+export default CheckoutPage; 
